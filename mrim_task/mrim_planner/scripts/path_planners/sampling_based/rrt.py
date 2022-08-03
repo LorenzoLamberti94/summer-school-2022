@@ -120,31 +120,33 @@ class RRT:
             point_valid = self.pointValid(point)
 
         return point.asTuple()
+
     # # #}
 
     # # #{ getRandomPointGaussian()
     def getRandomPointGaussian(self, sigma_offset=0.0):
-        
+
         # Compute mean and standard deviation
         st, en = [self.start[i] for i in range(3)], [self.end[i] for i in range(3)]
-        mean   = np.mean([st, en], axis=0)
-        sigma  = np.std([st, en], axis=0)
+        mean = np.mean([st, en], axis=0)
+        sigma = np.std([st, en], axis=0)
 
         # Inflate zero stddev
         for i in range(3):
             if sigma[i] < 1e-3:
                 sigma[i] = 0.1
 
-        point       = None
+        point = None
         point_valid = False
         while not point_valid:
-
-            raise NotImplementedError('[STUDENTS TODO] Implement Gaussian sampling in RRT to speed up the process and narrow the paths.')
+            raise NotImplementedError(
+                '[STUDENTS TODO] Implement Gaussian sampling in RRT to speed up the process and narrow the paths.')
             # Tips:
             #  - sample from Normal distribution: use numpy.random.normal (https://numpy.org/doc/stable/reference/random/generated/numpy.random.normal.html)
             #  - to prevent deadlocks when sampling continuously, increase the sampling space by inflating the standard deviation of the gaussian sampling
 
             # STUDENTS TODO: Sample XYZ in the state space
+            np.random.normal(loc=mean, scale=sigma, size=None)
             x = 0
             y = 0
             z = 0
@@ -219,41 +221,45 @@ class RRT:
             rewired_cost = point_cost + distEuclidean(neighbor, point)
             if rewired_cost < self.tree.get_cost(neighbor):
                 self.tree.rewire(neighbor, point, rewired_cost)
+
     # # #}
 
     # # #{ getParentWithOptimalCost()
     def getParentWithOptimalCost(self, point, closest_point, neighborhood):
 
         parent = closest_point
-        cost   = self.tree.get_cost(closest_point) + distEuclidean(closest_point, point)
+        cost = self.tree.get_cost(closest_point) + distEuclidean(closest_point, point)
 
         neighborhood_points = self.getPointsInNeighborhood(point, neighborhood)
         for neighbor in neighborhood_points:
 
-            raise NotImplementedError('[STUDENTS TODO] Getting node parents in RRT* not implemented. You have to finish it.')
             # Tips:
             #  - look for neighbor which when connected yields minimal path cost all the way back to the start
             #  - you might need functions 'self.tree.get_cost()' or 'distEuclidean()'
 
             # TODO: fill these two variables
-            cost = float('inf') 
-            parent = closest_point
+            new_cost = self.tree.get_cost(neighbor) + distEuclidean(neighbor, point)
+            if new_cost < cost:
+                cost = new_cost
+                parent = neighbor
 
         return parent, cost
+
     # # #}
 
     # # #{ buildTree()
     def buildTree(self, branch_size, rrtstar_neighborhood=None):
 
-        rrtstar                      = rrtstar_neighborhood is not None
-        start_time                   = time.time()
+        rrtstar = rrtstar_neighborhood is not None
+        start_time = time.time()
         rrt_gaussian_sigma_inflation = 0.0
 
         while not self.tree.valid:
 
-            point         = self.getRandomPoint() if not self.gaussian_sampling else self.getRandomPointGaussian(rrt_gaussian_sigma_inflation)
+            point = self.getRandomPoint() if not self.gaussian_sampling else self.getRandomPointGaussian(
+                rrt_gaussian_sigma_inflation)
             closest_point = self.getClosestPoint(point)
-           
+
             # normalize vector closest_point->point to length of branch_size
             point = self.setDistance(closest_point, point, branch_size)
 
