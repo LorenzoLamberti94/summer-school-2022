@@ -283,41 +283,24 @@ class TSPSolver3D():
             # Tips:
             #  - utilize sklearn.cluster.KMeans implementation (https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html)
             #  - after finding the labels, you may want to swap the classes (e.g., by looking at the distance of the UAVs from the cluster centers)
+            already_allocated_centers = data["already_allocated_centers"]
+            init_centers = np.zeros(shape=(2, 3))
+            init_centers[0,0] = already_allocated_centers[0][0]
+            init_centers[0,1] = already_allocated_centers[0][1]
+            init_centers[0,2] = already_allocated_centers[0][2]
+            init_centers[1,0] = already_allocated_centers[1][0]
+            init_centers[1,1] = already_allocated_centers[1][1]
+            init_centers[1,2] = already_allocated_centers[1][2]
 
-            kmeans= KMeans(k).fit(positions)
+            print(init_centers)
+            kmeans= KMeans(k, init=init_centers).fit(positions)
 
             # TODO: fill 1D list 'labels' of size len(viewpoints) with indices of the robots
             # labels = [randint(0, k - 1) for vp in viewpoints]
 
-            center_0 = Point(
-                kmeans.cluster_centers_[0][0],
-                kmeans.cluster_centers_[0][1],
-                kmeans.cluster_centers_[0][2]
-            )
-            center_1 = Point(
-                kmeans.cluster_centers_[1][0],
-                kmeans.cluster_centers_[1][1],
-                kmeans.cluster_centers_[1][2]
-            )
-            start_position_0 = Point(
-                problem.start_poses[0].position.x,
-                problem.start_poses[0].position.y,
-                problem.start_poses[0].position.z
-            )
-            if (distEuclidean(start_position_0, center_1)
-                < distEuclidean(start_position_0, center_0)):
-                # invert labels
-                labels = []
-                for lab in kmeans.labels_:
-                    if lab == 1:
-                        labels.append(0)
-                    else:
-                        labels.append(1)
-            else:
-                labels = kmeans.labels_
+            labels = kmeans.labels_
 
         elif method == "nearest":
-            all_vps = data["all_vps"]
             already_allocated_viewpoints = data["allocated_vps"]
             path_planner = data["path_planner"]
             nonclustered_vps = viewpoints
@@ -355,14 +338,21 @@ class TSPSolver3D():
 
         return clusters
 
-    def findNearestViewPoint(self, viewpoint, viewpoint_list, path_planner):
+    def findNearestViewPoint(self, viewpoint, viewpoint_list, path_planner, check_factor = 1.1):
         nearest = None
         closest_dist = None
         for vp in viewpoint_list:
+            if path_planner['distance_estimation_method'] != "euclidean":
+                path, dist = self.compute_path(viewpoint.pose, vp.pose, path_planner, "euclidean")
+                if closest_dist and dist > check_factor*closest_dist:
+                    # do not take time to check this vp, the euclidean distance is too great
+                    continue
             path, dist = self.compute_path(viewpoint.pose, vp.pose, path_planner, path_planner['distance_estimation_method'])
             if closest_dist is None or closest_dist > dist:
                 closest_dist = dist
                 nearest = vp
+        if nearest is None:
+            return self.findNearestViewPoint(viewpoint, viewpoint_list, path_planner, check_factor=check_factor + 0.1)
         return nearest
 
     # #}

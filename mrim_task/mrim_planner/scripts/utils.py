@@ -15,6 +15,21 @@ COLORS = ['r', 'b']
 
 ## | ------------------------ Functions ----------------------- |
 
+
+def compute_barycenter(point_list):
+    x_list = []
+    y_list = []
+    z_list = []
+    for point in point_list:
+        x_list.append(point.x)
+        y_list.append(point.y)
+        z_list.append(point.z)
+    return Point(
+        np.mean(x_list),
+        np.mean(y_list),
+        np.mean(z_list)
+    )
+
 # #{ distEuclidean()
 
 def distEuclidean(point_A, point_B):

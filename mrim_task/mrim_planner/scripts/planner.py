@@ -203,7 +203,11 @@ class MrimPlanner:
                                                         })
 
             else:
-                clusters = tsp_solver.clusterViewpoints(problem, nonclustered_vps, method=self._tsp_clustering_method)
+                # compute already allocated vps barycenter
+                center_0 = compute_barycenter([vp.pose.point for vp in viewpoints[0]])
+                center_1 = compute_barycenter([vp.pose.point for vp in viewpoints[1]])
+                data = {"already_allocated_centers": [center_0.asTuple(), center_1.asTuple()]}
+                clusters = tsp_solver.clusterViewpoints(problem, nonclustered_vps, method=self._tsp_clustering_method, data=data)
 
             for r in range(problem.number_of_robots):
                 viewpoints[r].extend(clusters[r])
