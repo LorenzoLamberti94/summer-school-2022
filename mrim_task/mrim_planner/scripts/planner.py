@@ -12,6 +12,9 @@ from utils import *
 from solvers.tsp_solvers import *
 from trajectory import Trajectory, TrajectoryUtils
 
+from copkmeans.cop_kmeans import cop_kmeans
+
+
 class MrimPlanner:
 
     ALLOWED_COLLISION_AVOIDANCE_METHODS = ['none', 'delay_2nd_till_1st_UAV_finishes', 'delay_till_no_collisions_occur']
@@ -139,6 +142,19 @@ class MrimPlanner:
         viewpoints       = []
         nonclustered_vps = []
 
+        must_link = []
+        all_viewpoints = []
+        idx = 0
+        all_viewpoints_map = {}
+        all_viewpoints_idx_to_point_map = {}
+        for ip in problem.inspection_points:
+            viewpoint = inspectionPointToViewPoint(ip, self._viewpoints_distance)
+            all_viewpoints.append(viewpoint.pose.point.asTuple()
+            )
+            all_viewpoints_map[viewpoint.pose.point.asTuple()] = idx
+            all_viewpoints_idx_to_point_map[idx] = viewpoint
+            idx += 1
+
         for r in range(problem.number_of_robots):
 
             # add starting pose of the robot
@@ -147,6 +163,7 @@ class MrimPlanner:
 
             # get robot ID
             robot_id = problem.robot_ids[r]
+            last_wp = None
             for ip in problem.inspection_points:
 
                 # convert IP to VP [id x y z heading]
@@ -156,14 +173,40 @@ class MrimPlanner:
                 if len(ip.inspectability) == 1 and robot_id in ip.inspectability:
                     viewpoints[r].append(viewpoint)
 
+                    if last_wp:
+                        must_link.append(
+                            (
+                                all_viewpoints_map[last_wp.pose.point.asTuple()],
+                                all_viewpoints_map[viewpoint.pose.point.asTuple()]
+                            )
+                        )
+                    last_wp = viewpoint
+
                 # if inspectability of IP is arbitrary, store it for clustering
                 elif len(ip.inspectability) != 1 and ip.idx not in [nips.idx for nips in nonclustered_vps]:
                     nonclustered_vps.append(viewpoint)
 
         # Cluster the rest of the viewpoints into two separate groups
-        clusters = tsp_solver.clusterViewpoints(problem, nonclustered_vps, method=self._tsp_clustering_method)
-        for r in range(problem.number_of_robots):
-            viewpoints[r].extend(clusters[r])
+        if self._tsp_clustering_method == "cop_kmeans":
+            c_clusters, c_centers = cop_kmeans(all_viewpoints, k=problem.number_of_robots, ml=must_link)
+            for i in range(len(c_clusters)):
+                if all_viewpoints_idx_to_point_map[i] not in viewpoints[c_clusters[i]]:
+                    viewpoints[c_clusters[i]].append(all_viewpoints_idx_to_point_map[i])
+        else:
+            if self._tsp_clustering_method == "nearest":
+                tsp_solver.setup(problem, self._path_planner, all_viewpoints_idx_to_point_map.values())
+                clusters = tsp_solver.clusterViewpoints(problem, nonclustered_vps, method=self._tsp_clustering_method,
+                                                        data={
+                                                            "all_vps": all_viewpoints_idx_to_point_map.values(),
+                                                            "allocated_vps": viewpoints,
+                                                            "path_planner": self._path_planner
+                                                        })
+
+            else:
+                clusters = tsp_solver.clusterViewpoints(problem, nonclustered_vps, method=self._tsp_clustering_method)
+
+            for r in range(problem.number_of_robots):
+                viewpoints[r].extend(clusters[r])
 
         # print out viewpoints
         for i in range(len(viewpoints)):

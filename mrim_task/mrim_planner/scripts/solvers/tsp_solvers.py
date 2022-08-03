@@ -25,6 +25,7 @@ class TSPSolver3D():
 
     def __init__(self):
         self.lkh = LKHInvoker()
+        self.computed_path = {}
 
     # # #{ setup()
     def setup(self, problem, path_planner, viewpoints):
@@ -143,6 +144,10 @@ class TSPSolver3D():
             path (list[Pose]): sequence of points
             distance (float): length of path
         '''
+
+        if (p_from.point.asTuple(), p_to.point.asTuple()) in self.computed_path.keys():
+            return self.computed_path[(p_from.point.asTuple(), p_to.point.asTuple())]
+
         path, distance = [], float('inf')
 
         # Use Euclidean metric
@@ -170,6 +175,9 @@ class TSPSolver3D():
             rospy.logerr('No path found. Shutting down.')
             rospy.signal_shutdown('No path found. Shutting down.');
             exit(-2)
+
+        # store computed path
+        self.computed_path[(p_from.point.asTuple(), p_to.point.asTuple())] = (path, distance)
 
         return path, distance
 
@@ -249,7 +257,7 @@ class TSPSolver3D():
 
     # #{ clusterViewpoints()
 
-    def clusterViewpoints(self, problem, viewpoints, method):
+    def clusterViewpoints(self, problem, viewpoints, method, data=None):
         '''
         Clusters viewpoints into K (number of robots) clusters.
 
@@ -268,13 +276,65 @@ class TSPSolver3D():
             # Prepare positions of the viewpoints in the world
             positions = np.array([vp.pose.point.asList() for vp in viewpoints])
 
-            raise NotImplementedError('[STUDENTS TODO] KMeans clustering of viewpoints not implemented. You have to finish it on your own')
             # Tips:
             #  - utilize sklearn.cluster.KMeans implementation (https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html)
             #  - after finding the labels, you may want to swap the classes (e.g., by looking at the distance of the UAVs from the cluster centers)
 
+            kmeans= KMeans(k).fit(positions)
+
             # TODO: fill 1D list 'labels' of size len(viewpoints) with indices of the robots
-            labels = [randint(0, k - 1) for vp in viewpoints]
+            # labels = [randint(0, k - 1) for vp in viewpoints]
+
+            center_0 = Point(
+                kmeans.cluster_centers_[0][0],
+                kmeans.cluster_centers_[0][1],
+                kmeans.cluster_centers_[0][2]
+            )
+            center_1 = Point(
+                kmeans.cluster_centers_[1][0],
+                kmeans.cluster_centers_[1][1],
+                kmeans.cluster_centers_[1][2]
+            )
+            start_position_0 = Point(
+                problem.start_poses[0].position.x,
+                problem.start_poses[0].position.y,
+                problem.start_poses[0].position.z
+            )
+            if (distEuclidean(start_position_0, center_1)
+                < distEuclidean(start_position_0, center_0)):
+                # invert labels
+                labels = []
+                for lab in kmeans.labels_:
+                    if lab == 1:
+                        labels.append(0)
+                    else:
+                        labels.append(1)
+            else:
+                labels = kmeans.labels_
+
+        elif method == "nearest":
+            all_vps = data["all_vps"]
+            already_allocated_viewpoints = data["allocated_vps"]
+            path_planner = data["path_planner"]
+            nonclustered_vps = viewpoints
+            clusters = []
+            for r in range(k):
+                clusters.append([])
+            print("\n\nNEAREST\n\n")
+            while nonclustered_vps:
+                vp_to_class = nonclustered_vps.pop()
+                nearest_vp = self.findNearestViewPoint(vp_to_class,
+                                                       already_allocated_viewpoints[0] + already_allocated_viewpoints[1],
+                                                       path_planner)
+                if nearest_vp in already_allocated_viewpoints[0]:
+                    clusters[0].append(vp_to_class)
+                elif nearest_vp in already_allocated_viewpoints[1]:
+                    clusters[1].append(vp_to_class)
+                else:
+                    nonclustered_vps.append(vp_to_class)
+
+            print("\n\nEND NEAREST\n\n")
+            return clusters
 
         ## | -------------------- Random clustering ------------------- |
         else:
@@ -290,5 +350,16 @@ class TSPSolver3D():
                     clusters[r].append(viewpoints[label])
 
         return clusters
+
+    def findNearestViewPoint(self, viewpoint, viewpoint_list, path_planner):
+        nearest = None
+        closest_dist = None
+        for vp in viewpoint_list:
+            print("compute path")
+            path, dist = self.compute_path(viewpoint.pose, vp.pose, path_planner, path_planner['distance_estimation_method'])
+            if closest_dist is None or closest_dist > dist:
+                closest_dist = dist
+                nearest = vp
+        return nearest
 
     # #}
