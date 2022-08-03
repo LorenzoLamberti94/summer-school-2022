@@ -359,7 +359,6 @@ class TSPSolver3D():
         nearest = None
         closest_dist = None
         for vp in viewpoint_list:
-            print("compute path")
             path, dist = self.compute_path(viewpoint.pose, vp.pose, path_planner, path_planner['distance_estimation_method'])
             if closest_dist is None or closest_dist > dist:
                 closest_dist = dist
