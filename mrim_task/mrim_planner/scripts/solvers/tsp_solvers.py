@@ -17,6 +17,8 @@ from path_planners.sampling_based.rrt import RRT
 
 from solvers.LKHInvoker import LKHInvoker
 
+
+
 class TSPSolver3D():
 
     ALLOWED_PATH_PLANNERS               = ('euclidean', 'astar', 'rrt', 'rrtstar')
@@ -144,9 +146,11 @@ class TSPSolver3D():
             path (list[Pose]): sequence of points
             distance (float): length of path
         '''
+        if path_planner_method not in self.computed_path.keys():
+            self.computed_path[path_planner_method] = {}
 
         if (p_from.point.asTuple(), p_to.point.asTuple()) in self.computed_path.keys():
-            return self.computed_path[(p_from.point.asTuple(), p_to.point.asTuple())]
+            return self.computed_path[path_planner_method][(p_from.point.asTuple(), p_to.point.asTuple())]
 
         path, distance = [], float('inf')
 
@@ -177,7 +181,7 @@ class TSPSolver3D():
             exit(-2)
 
         # store computed path
-        self.computed_path[(p_from.point.asTuple(), p_to.point.asTuple())] = (path, distance)
+        self.computed_path[path_planner_method][(p_from.point.asTuple(), p_to.point.asTuple())] = (path, distance)
 
         return path, distance
 
