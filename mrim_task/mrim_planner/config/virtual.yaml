@@ -33,7 +33,7 @@ trajectory:
 # Parameters for path smoothing
 path_smoothing:
   sampling_step: 0.1  # (m)
-  lookahead_dist: 0.3 # (m)
+  lookahead_dist: 0.25 # (m)
 
 # Parameters for sampling the UAVs' trajectories
 trajectory_sampling:
