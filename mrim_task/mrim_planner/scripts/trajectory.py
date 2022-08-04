@@ -447,20 +447,18 @@ class TrajectoryUtils():
 
             sampling_step = trajectory.dT
 
-            # STUDENTS TODO: Sample the path parametrization 'toppra_trajectory' (instance of TOPPRA library).
-            raise NotImplementedError('[STUDENTS TODO] Trajectory sampling not finished. You have to implement it on your own.')
             # Tips:
             #  - check documentation for TOPPRA (look for eval() function): https://hungpham2511.github.io/toppra/index.html
             #  - use 'toppra_trajectory' and the predefined sampling step 'sampling_step'
 
-            samples = [] # [STUDENTS TODO] Fill this variable with trajectory samples
+            ts_samples = np.arange(0.0, toppra_trajectory.duration, sampling_step)
+            samples = toppra_trajectory.eval(ts_samples)
 
             # Convert to Trajectory class
             poses      = [Pose(q[0], q[1], q[2], q[3]) for q in samples]
             trajectory = self.posesToTrajectory(poses)
 
         return trajectory
-    # #}
 
     # #{ checkCollisionsOnHorizonAndBreak()
     def checkCollisionsOnHorizonAndBreak(self, trajectory, reference_trajectory, horizon, safety_distance):
@@ -565,7 +563,8 @@ class TrajectoryUtils():
         path       = ta.SplineInterpolator(np.linspace(0, 1, len(waypoints)), wp_lists)
         pc_vel     = constraint.JointVelocityConstraint(v_lims)
         pc_acc     = constraint.JointAccelerationConstraint(a_lims)
-        instance   = algo.TOPPRA([pc_vel, pc_acc], path, parametrizer="ParametrizeConstAccel")
+        gridpoints = np.linspace(0, path.duration, 100000)
+        instance   = algo.TOPPRA([pc_vel, pc_acc], path, gridpoints=gridpoints, parametrizer="ParametrizeConstAccel")
         trajectory = instance.compute_trajectory()
 
         return trajectory
