@@ -292,8 +292,13 @@ class TSPSolver3D():
             init_centers[1,1] = already_allocated_centers[1][1]
             init_centers[1,2] = already_allocated_centers[1][2]
 
+            z_diff = init_centers[0, 2] - init_centers[1, 2]
+            z_factor = 1000
+            init_centers[0, 2] += z_diff*z_factor
+            init_centers[1, 2] -= z_diff*z_factor
+
             print(init_centers)
-            kmeans= KMeans(k, init=init_centers).fit(positions)
+            kmeans = KMeans(k, init=init_centers).fit(positions)
 
             # TODO: fill 1D list 'labels' of size len(viewpoints) with indices of the robots
             # labels = [randint(0, k - 1) for vp in viewpoints]
