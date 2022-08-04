@@ -72,7 +72,8 @@ class Node:
         b = self.pos[1] - self.goal[1]
         c = self.pos[2] - self.goal[2]
 
-        return np.sqrt(a*a + b*b + a*b)
+        # return np.sqrt(a*a + b*b + a*b)
+        return a*a + b*b + c*c
 
 # # #}
 
@@ -103,21 +104,23 @@ class AStar():
         #  - divide the given path by a certain ratio and use this method recursively
 
         # Find the point with the maximum distance
-        dmax = 0
-        index = 0
+        dmax = None
+        index = None
         end = len(path)
-        for i in range(1, end - 2):
+        for i in range(1, end - 1):
             pt3 = path[i]
             d = np.linalg.norm(np.cross(np.array(pt2) - np.array(pt1), np.array(pt1) - np.array(pt3))) / np.linalg.norm(np.array(pt2) - np.array(pt1))
-            if d > dmax or dmax is None:
+            if dmax is None or d > dmax :
                 index = i
                 dmax = d
+        if index is None:
+            return [pt1, pt2]
 
         # [STUDENTS TODO]
         if self.grid.obstacleBetween(pt1, pt2):
             # Recursive call
-            seg1 = self.halveAndTest(path[1:index])
-            seg2 = self.halveAndTest(path[index:end-1])
+            seg1 = self.halveAndTest(path[:index])
+            seg2 = self.halveAndTest(path[index:])
 
             seg1.extend(seg2)
             return seg1

@@ -5,6 +5,7 @@ Custom TSP Loader
 
 import math
 import dubins
+from copy import deepcopy
 
 from utils import *
 
@@ -619,29 +620,43 @@ class TrajectoryUtils():
             # [STUDENTS TODO] CHANGE BELOW
             delay_robot_idx, nondelay_robot_idx = 0, 1
 
-            #### Lorenzo's implementation ####
-            traj_time_min_index = np.argmin(traj_times)
-            traj_time_max_index = np.argmax(traj_times)
-            delay_robot_idx, nondelay_robot_idx = traj_time_min_index, traj_time_max_index
-            ##################################
-
-
             # TIP: use function `self.trajectoriesCollide()` to check if two trajectories are in collision
             collision_flag, collision_idx = \
-                self.trajectoriesCollide(trajectories[delay_robot_idx], trajectories[nondelay_robot_idx], safety_distance)
+                self.trajectoriesCollide(trajectories[0], trajectories[1], safety_distance)
 
+            traj_0 = deepcopy(trajectories[0])
+            traj_1 = deepcopy(trajectories[1])
             i=0
+            delay_t_0 = 0.0
             while collision_flag:
-
-                if collision_flag:
-                    delay_t += delay_step
-                else: break
-
-                trajectories[delay_robot_idx].delayStart(delay_t)
+                delay_t_0 += delay_step
+                traj_0.delayStart(delay_t_0)
+                i += 1
 
                 collision_flag, collision_idx = \
-                    self.trajectoriesCollide(trajectories[delay_robot_idx], trajectories[nondelay_robot_idx], safety_distance)
+                    self.trajectoriesCollide(traj_0, trajectories[1], safety_distance)
+
+            collision_flag, collision_idx = \
+                self.trajectoriesCollide(trajectories[1], trajectories[0], safety_distance)
+            i = 0
+            delay_t_1 = 0.0
+            while collision_flag:
+                delay_t_1 += delay_step
+                traj_1.delayStart(delay_t_1)
+
+                collision_flag, collision_idx = \
+                    self.trajectoriesCollide(traj_1, trajectories[0], safety_distance)
                 i+=1
+
+            if traj_0.getTime() > traj_1.getTime():
+                delay_robot_idx = 1
+                delay_t = delay_t_1
+                trajectories[1] = traj_1
+            else:
+                delay_robot_idx = 0
+                delay_t = delay_t_0
+                trajectories[0] = traj_0
+
 
             # i = 0
             # while collision_flag:

@@ -60,10 +60,11 @@ class MrimPlanner:
         self._collision_avoidance    = rospy.get_param('~collision_avoidance/method', 'none')
 
         ## | ------------------- setup path planner ------------------- |
+        custom_obstacle_safety = 0.02
         self._path_planner = {}
         self._path_planner['timeout']                       = rospy.get_param('~path_planner/timeout', 1.0)
         self._path_planner['path_planning_method']          = rospy.get_param('~path_planner/method', 'rrt')
-        self._path_planner['safety_distance']               = rospy.get_param('~trajectories/min_distance/obstacles')
+        self._path_planner['safety_distance']               = rospy.get_param('~trajectories/min_distance/obstacles') + custom_obstacle_safety
         self._path_planner['distance_estimation_method']    = rospy.get_param('~tsp/distance_estimates', 'euclidean')
         self._path_planner['straighten']                    = rospy.get_param('~path_planner/straighten_paths')
 
